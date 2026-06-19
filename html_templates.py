@@ -1,6 +1,4 @@
 def get_game_html(room_id: str) -> str:
-    # Используем двойные фигурные скобки {{}} для CSS/JS, чтобы Python f-строка их не ломала,
-    # а для JS-переменных внутри строк используем обычные кавычки и плюсы.
     return f"""
     <!DOCTYPE html>
     <html>
@@ -9,8 +7,9 @@ def get_game_html(room_id: str) -> str:
         <meta charset="utf-8">
         <style>
             body {{
-                font-family: sans-serif;
-                background-color: #1e1e24;
+                font-family: 'Segoe UI', sans-serif;
+                background: url('/bg.jpg') no-repeat center center fixed;
+                background-size: cover;
                 color: #fff;
                 display: flex;
                 flex-direction: column;
@@ -18,106 +17,217 @@ def get_game_html(room_id: str) -> str:
                 justify-content: center;
                 height: 100vh;
                 margin: 0;
+                overflow: hidden;
             }}
+            
             .status-box {{
-                background-color: #2a2a35;
-                padding: 10px 20px;
-                border-radius: 8px;
+                background: rgba(15, 15, 20, 0.85);
+                padding: 12px 25px;
+                border-radius: 12px;
                 font-size: 18px;
                 font-weight: bold;
-                margin-bottom: 15px;
-                border: 1px solid #ff4a8d;
+                margin-bottom: 20px;
+                border: 2px solid #ff4a8d;
+                box-shadow: 0 0 20px rgba(255, 74, 141, 0.5);
+                backdrop-filter: blur(8px);
             }}
+            
             .game-container {{
                 display: flex;
-                gap: 20px;
+                gap: 25px;
                 align-items: flex-start;
+                background: rgba(15, 15, 20, 0.8);
+                padding: 20px;
+                border-radius: 16px;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+                border: 1px solid rgba(255,255,255,0.1);
+                backdrop-filter: blur(8px);
             }}
+            
             .board {{
                 display: grid;
-                grid-template-columns: repeat(8, 60px);
-                grid-template-rows: repeat(8, 60px);
-                border: 4px solid #333;
-                border-radius: 4px;
+                grid-template-columns: repeat(8, 65px);
+                grid-template-rows: repeat(8, 65px);
+                border: 5px solid #2d2d38;
+                border-radius: 6px;
             }}
+            
             .square {{
-                width: 60px;
-                height: 60px;
+                width: 65px;
+                height: 65px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 42px;
+                font-size: 46px;
                 cursor: pointer;
                 user-select: none;
+                transition: background-color 0.1s;
             }}
+            
             .white-sq {{ background-color: #eedcbf; color: #000; }}
             .black-sq {{ background-color: #b88b64; color: #000; }}
-            .selected {{ background-color: #fffa73 !important; }}
             
-            .chat-container {{
-                width: 250px;
-                height: 488px;
-                background-color: #16161a;
-                border: 2px solid #333;
-                border-radius: 4px;
+            .selected {{ 
+                background-color: #7fffd4 !important;
+                box-shadow: inset 0 0 12px rgba(0,0,0,0.3);
+            }}
+            
+            .side-panel {{
                 display: flex;
                 flex-direction: column;
+                gap: 15px;
             }}
+            
+            .chat-container {{
+                width: 280px;
+                height: 380px;
+                background-color: rgba(5, 5, 8, 0.95);
+                border: 2px solid #2d2d38;
+                border-radius: 12px;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }}
+            
             .chat-title {{
-                background-color: #24242b;
-                padding: 10px;
+                background: linear-gradient(90deg, #ff4a8d, #8a2be2);
+                padding: 12px;
                 text-align: center;
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: bold;
-                border-bottom: 1px solid #333;
+                letter-spacing: 1px;
             }}
+            
             .messages {{
                 flex: 1;
-                padding: 10px;
+                padding: 15px;
                 overflow-y: auto;
                 font-size: 14px;
                 display: flex;
                 flex-direction: column;
-                gap: 5px;
+                gap: 8px;
             }}
+            
+            .messages div {{
+                background: rgba(255,255,255,0.05);
+                padding: 6px 10px;
+                border-radius: 6px;
+            }}
+            
             .input-area {{
                 display: flex;
-                padding: 10px;
-                gap: 5px;
-                border-top: 1px solid #333;
+                padding: 12px;
+                gap: 8px;
+                border-top: 1px solid #2d2d38;
             }}
+            
             .input-area input {{
                 flex: 1;
-                background: #24242b;
-                border: 1px solid #444;
+                background: #111115;
+                border: 1px solid #3d3d4e;
                 color: #fff;
-                padding: 5px;
-                border-radius: 3px;
+                padding: 8px;
+                border-radius: 6px;
+                outline: none;
             }}
+            
             .input-area button {{
-                background-color: #ff4a8d;
+                background: #ff4a8d;
                 border: none;
                 color: white;
-                padding: 5px 10px;
-                border-radius: 3px;
+                padding: 8px 15px;
+                border-radius: 6px;
                 cursor: pointer;
                 font-weight: bold;
             }}
+            
+            .controls-panel {{
+                display: flex;
+                gap: 10px;
+            }}
+            
+            .btn {{
+                flex: 1;
+                padding: 12px;
+                border: none;
+                border-radius: 8px;
+                color: white;
+                font-weight: bold;
+                cursor: pointer;
+                font-size: 14px;
+                transition: transform 0.1s;
+            }}
+            .btn:active {{ transform: scale(0.96); }}
+            .btn-resign {{ background: #e63946; }}
+            .btn-draw {{ background: #457b9d; }}
+            
+            .modal {{
+                display: none;
+                position: fixed;
+                top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.85);
+                z-index: 100;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(4px);
+            }}
+            
+            .modal-content {{
+                background: #1e1e24;
+                border: 2px solid #ff4a8d;
+                padding: 30px;
+                border-radius: 16px;
+                text-align: center;
+            }}
+            
+            .modal-buttons {{
+                display: flex;
+                gap: 15px;
+                margin-top: 20px;
+                justify-content: center;
+            }}
+            
+            .modal-btn {{
+                padding: 10px 25px;
+                border: none;
+                border-radius: 8px;
+                font-weight: bold;
+                cursor: pointer;
+            }}
+            .btn-accept {{ background: #2a9d8f; color: white; }}
+            .btn-decline {{ background: #e63946; color: white; }}
         </style>
     </head>
     <body>
 
-        <div class="status-box" id="role-status">Подключение к серверу...</div>
+        <div class="status-box" id="role-status">Инициализация игрового поля...</div>
 
         <div class="game-container">
             <div class="board" id="chessboard"></div>
 
-            <div class="chat-container">
-                <div class="chat-title">ТВИЧ-ЧАТ МАТЧА</div>
-                <div class="messages" id="chat-messages"></div>
-                <div class="input-area">
-                    <input type="text" id="chat-input" placeholder="Отправить сообщение...">
-                    <button id="send-btn">Ок</button>
+            <div class="side-panel">
+                <div class="chat-container">
+                    <div class="chat-title">💬 ТВИЧ-ЧАТ МАТЧА</div>
+                    <div class="messages" id="chat-messages"></div>
+                    <div class="input-area">
+                        <input type="text" id="chat-input" placeholder="Написать в чат...">
+                        <button id="send-btn">Ок</button>
+                    </div>
+                </div>
+                
+                <div class="controls-panel">
+                    <button class="btn btn-resign" id="resign-btn">🏳️ Сдаться</button>
+                    <button class="btn btn-draw" id="draw-btn">🤝 Ничья</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="draw-modal">
+            <div class="modal-content">
+                <h3>🤝 Соперник предлагает ничью!</h3>
+                <div class="modal-buttons">
+                    <button class="modal-btn btn-accept" id="draw-accept">Принять</button>
+                    <button class="modal-btn btn-decline" id="draw-decline">Отклонить</button>
                 </div>
             </div>
         </div>
@@ -133,17 +243,16 @@ def get_game_html(room_id: str) -> str:
             let selectedSquare = null;
 
             const unicodePieces = {{
-                'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚', 'P': '♟',
-                'r': '♖', 'n': '♘', 'b': '♗', 'q': '♕', 'k': '♔', 'p': '♙',
+                'r': '♖', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
+                'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙',
                 '.': ''
             }};
 
             function updateStatusText() {{
                 const turnText = currentTurn === "white" ? "Ход: Белых" : "Ход: Чёрных";
-                let roleText = "Зритель";
+                let roleText = "👀 Зритель";
                 if (myRole === "white") roleText = "⚪ Белые";
                 if (myRole === "black") roleText = "⚫ Чёрные";
-                
                 document.getElementById("role-status").innerText = "Вы: " + roleText + " | " + turnText;
             }}
 
@@ -182,22 +291,20 @@ def get_game_html(room_id: str) -> str:
                 const clickedPiece = boardState[r][c];
                 
                 if (selectedSquare) {{
-                    // Если кликнули на другую свою фигуру — перевыбираем её
                     if (isYourPiece(clickedPiece)) {{
                         selectedSquare = {{ row: r, col: c }};
                         drawBoard();
                         return;
                     }}
                     
-                    // Сама логика перемещения (пока без строгих шахматных правил, но ходить можно)
-                    const movingPiece = boardState[selectedSquare.row][selectedSquare.col];
-                    boardState[r][c] = movingPiece;
-                    boardState[selectedSquare.row][selectedSquare.col] = ".";
+                    let nextBoard = JSON.parse(JSON.stringify(boardState));
+                    const movingPiece = nextBoard[selectedSquare.row][selectedSquare.col];
+                    nextBoard[r][c] = movingPiece;
+                    nextBoard[selectedSquare.row][selectedSquare.col] = ".";
                     
-                    ws.send(JSON.stringify({{ "type": "move", "board": boardState }}));
+                    ws.send(JSON.stringify({{ "type": "move", "board": nextBoard }}));
                     selectedSquare = null;
                 }} else {{
-                    // Выбираем фигуру только если она принадлежит текущему игроку
                     if (isYourPiece(clickedPiece)) {{
                         selectedSquare = {{ row: r, col: c }};
                     }}
@@ -208,42 +315,59 @@ def get_game_html(room_id: str) -> str:
             ws.onmessage = (event) => {{
                 const data = JSON.parse(event.data);
                 
-                if (data.type === "init") {{
-                    myRole = data.role;
-                    boardState = data.board;
-                    currentTurn = data.turn;
-                    updateStatusText();
-                    drawBoard();
-                }} else if (data.type === "update") {{
+                if (data.type === "init" || data.type === "update") {{
+                    if (data.type === "init") myRole = data.role;
                     boardState = data.board;
                     currentTurn = data.turn;
                     updateStatusText();
                     drawBoard();
                 }} else if (data.type === "chat") {{
                     const msgDiv = document.createElement("div");
-                    // Исправлено: чистый JS без поломки от f-строки Python
                     msgDiv.innerHTML = "<b>" + data.sender + ":</b> " + data.text;
-                    const messagesContainer = document.getElementById("chat-messages");
-                    messagesContainer.appendChild(msgDiv);
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    const container = document.getElementById("chat-messages");
+                    container.appendChild(msgDiv);
+                    container.scrollTop = container.scrollHeight;
+                }} else if (data.type === "system_alert") {{
+                    const msgDiv = document.createElement("div");
+                    msgDiv.innerHTML = "<span style='color: #ff4a8d; font-weight:bold;'>📢 " + data.text + "</span>";
+                    document.getElementById("chat-messages").appendChild(msgDiv);
+                }} else if (data.type === "draw_offer" && data.from !== myRole) {{
+                    document.getElementById("draw-modal").style.display = "flex";
+                }} else if (data.type === "draw_close") {{
+                    document.getElementById("draw-modal").style.display = "none";
                 }}
             }};
 
             function sendChatMessage() {{
                 const input = document.getElementById("chat-input");
                 if (input.value.trim() !== "") {{
-                    let name = "Зритель";
-                    if (myRole === "white") name = "Белый";
-                    if (myRole === "black") name = "Чёрный";
-                    
-                    ws.send(JSON.stringify({{
-                        "type": "chat",
-                        "sender": name,
-                        "text": input.value
-                    }}));
+                    let name = "👀 Зритель";
+                    if (myRole === "white") name = "⚪ Белый";
+                    if (myRole === "black") name = "⚫ Чёрный";
+                    ws.send(JSON.stringify({{ "type": "chat", "sender": name, "text": input.value }}));
                     input.value = "";
                 }}
             }}
+
+            document.getElementById("resign-btn").onclick = () => {{
+                if (myRole === "spectator") return;
+                if (confirm("Вы уверены, что хотите сдаться?")) {{
+                    ws.send(JSON.stringify({{ "type": "resign", "player": myRole }}));
+                }}
+            }};
+
+            document.getElementById("draw-btn").onclick = () => {{
+                if (myRole === "spectator") return;
+                ws.send(JSON.stringify({{ "type": "draw_offer", "player": myRole }}));
+            }};
+
+            document.getElementById("draw-accept").onclick = () => {{
+                ws.send(JSON.stringify({{ "type": "draw_respond", "accepted": true }}));
+            }};
+
+            document.getElementById("draw-decline").onclick = () => {{
+                ws.send(JSON.stringify({{ "type": "draw_respond", "accepted": false }}));
+            }};
 
             document.getElementById("send-btn").onclick = sendChatMessage;
             document.getElementById("chat-input").onkeydown = (e) => {{ if (e.key === 'Enter') sendChatMessage(); }};
