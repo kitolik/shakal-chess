@@ -1,111 +1,104 @@
 
-import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-import random
-import subprocess
 import threading
 import time
-import re
-
-# Импортируем твой HTML шаблон из соседнего файла
-from html_templates import HTML_TEMPLATE
+import urllib.request
+from html_templates import get_game_html
 
 app = FastAPI()
-games = {}
+
+# Хранилище игровых комнат
+rooms = {}
+
+def keep_alive(app_url):
+    """Функция самопинга, чтобы Render не усыплял сервер"""
+    while True:
+        time.sleep(600)  # Ждем 10 минут
+        try:
+            urllib.request.urlopen(app_url)
+            print("🌸 Пинг хостинга выполнен успешно! Сервер не спит.")
+        except Exception as e:
+            print(f"⚠️ Ошибка пинга: {e}")
 
 @app.get("/")
-async def get_index():
-    game_id = str(random.randint(100000000, 999999999))
-    return HTMLResponse(f'<h2>Комната создана! Отправь другу ссылку:</h2><a href="/game/{game_id}">Войти в игру</a>')
+async def get_home():
+    return HTMLResponse("<h1>Шакал-Шахматы запущены!</h1><p>Перейдите по ссылке /game/любое_число, например <a href='/game/777'>/game/777</a></p>")
 
-@app.get("/game/{game_id}")
-async def get_game(game_id: str):
-    return HTMLResponse(HTML_TEMPLATE)
+@app.get("/game/{room_id}")
+async def get_room(room_id: str):
+    return HTMLResponse(get_game_html(room_id))
 
-@app.websocket("/ws/{game_id}")
-async def websocket_endpoint(websocket: WebSocket, game_id: str):
+@app.websocket("/ws/{room_id}")
+async def websocket_endpoint(websocket: WebSocket, room_id: str):
     await websocket.accept()
     
-    if game_id not in games:
-        games[game_id] = {
-            "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    if room_id not in rooms:
+        rooms[room_id] = {
+            "connections": [],
             "white": None,
             "black": None,
-            "connections": []
+            "board": [
+                ["R", "N", "B", "Q", "K", "B", "N", "R"],
+                ["P", "P", "P", "P", "P", "P", "P", "P"],
+                [".", ".", ".", ".", ".", ".", ".", "."],
+                [".", ".", ".", ".", ".", ".", ".", "."],
+                [".", ".", ".", ".", ".", ".", ".", "."],
+                [".", ".", ".", ".", ".", ".", ".", "."],
+                ["p", "p", "p", "p", "p", "p", "p", "p"],
+                ["r", "n", "b", "q", "k", "b", "n", "r"]
+            ]
         }
-    
-    game = games[game_id]
-    game["connections"].append(websocket)
+        
+    room = rooms[room_id]
+    room["connections"].append(websocket)
     
     # Автоматическое распределение ролей
-    if game["white"] is None:
+    if room["white"] is None:
+        room["white"] = websocket
         role = "white"
-        game["white"] = websocket
-    elif game["black"] is None:
+    elif room["black"] is None:
+        room["black"] = websocket
         role = "black"
-        game["black"] = websocket
     else:
         role = "spectator"
         
-    await websocket.send_json({"type": "init", "role": role, "fen": game["fen"]})
+    # Отправляем игроку его роль и текущую доску
+    await websocket.send_json({"type": "init", "role": role, "board": room["board"]})
     
     try:
         while True:
             data = await websocket.receive_json()
-            if data["type"] == "move":
-                game["fen"] = data["move"]
-                for conn in game["connections"]:
-                    if conn != websocket:
-                        await conn.send_json({"type": "update", "fen": game["fen"]})
-            elif data["type"] == "chat":
-                for conn in game["connections"]:
-                    await conn.send_json({"type": "chat", "senderRole": role, "text": data["text"]})
-    except WebSocketDisconnect:
-        game["connections"].remove(websocket)
-        if game["white"] == websocket: game["white"] = None
-        if game["black"] == websocket: game["black"] = None
-
-
-# Функция для автоматического запуска фонового интернет-туннеля
-def start_tunnel(port, game_id):
-    print("🌸 Создаю автоматическую ссылку для Дискорда через Ngrok...")
-    from pyngrok import ngrok, conf
-    import logging
-    
-    # Отключаем лишний спам библиотеки в консоль
-    logging.getLogger("pyngrok").setLevel(logging.WARNING)
-    
-    try:
-        # !!! КРИТИЧЕСКИ ВАЖНО: Вставь свой токен с сайта между кавычек ниже !!!
-        MY_TOKEN = "3FKAYw8fGFs2ctYmj8RcKYmjmpI_5ZEtJ2YgEhWn226H6JDLo"
-        
-        config = conf.PyngrokConfig(auth_token=MY_TOKEN)
-        
-        # Поднимаем стабильный туннель
-        tunnel = ngrok.connect(port, pyngrok_config=config)
-        public_url = tunnel.public_url
-        
-        # Переводим на безопасный протокол https
-        if public_url.startswith("http://"):
-            public_url = public_url.replace("http://", "https://")
             
-        print("\n" + "="*70)
-        print("  🎉 ВСЁ ГОТОВО! ССЫЛКА ДЛЯ ДИСКОРДА (ОТПРАВЬ ДРУГУ):")
-        print(f"  {public_url}/game/{game_id}")
-        print("="*70 + "\n")
-    except Exception as e:
-        print(f"⚠️ Ошибка создания ссылки ngrok: {e}")
-        
+            if data["type"] == "move" and role in ["white", "black"]:
+                room["board"] = data["board"]
+                # Рассылаем новый ход всем в комнате
+                for conn in room["connections"]:
+                    await conn.send_json({"type": "update", "board": room["board"]})
+            elif data["type"] == "chat":
+                # Рассылаем сообщение в чат
+                for conn in room["connections"]:
+                    await conn.send_json({"type": "chat", "sender": data["sender"], "text": data["text"]})
+                    
+    except WebSocketDisconnect:
+        room["connections"].remove(websocket)
+        # Освобождаем роль, если игрок отключился
+        if room["white"] == websocket:
+            room["white"] = None
+        elif room["black"] == websocket:
+            room["black"] = None
+            
+        # Если в комнате пусто — полностью очищаем её
+        if len(room["connections"]) == 0:
+            del rooms[room_id]
 
 if __name__ == "__main__":
     PORT = 8000
-    start_game_id = str(random.randint(100000, 999999))
+    RENDER_APP_URL = "https://shakal-chess.onrender.com/"
     
-    # Запуск потока генерации ссылки
-    tunnel_thread = threading.Thread(target=start_tunnel, args=(PORT, start_game_id), daemon=True)
-    tunnel_thread.start()
+    # Запуск фонового потока для удержания сервера в активном состоянии
+    ping_thread = threading.Thread(target=keep_alive, args=(RENDER_APP_URL,), daemon=True)
+    ping_thread.start()
     
-    time.sleep(1)
-    # Меняем 127.0.0.1 на 0.0.0.0, чтобы сервер слушал все входящие подключения от туннеля
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="warning")
