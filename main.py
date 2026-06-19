@@ -8,13 +8,11 @@ from html_templates import get_game_html
 
 app = FastAPI()
 
-# Хранилище игровых комнат
 rooms = {}
 
 def keep_alive(app_url):
-    """Функция самопинга, чтобы Render не усыплял сервер"""
     while True:
-        time.sleep(600)  # Ждем 10 минут
+        time.sleep(600)
         try:
             urllib.request.urlopen(app_url)
             print("🌸 Пинг хостинга выполнен успешно! Сервер не спит.")
@@ -23,7 +21,7 @@ def keep_alive(app_url):
 
 @app.get("/")
 async def get_home():
-    return HTMLResponse("<h1>Шакал-Шахматы запущены!</h1><p>Перейдите по ссылке /game/любое_число, например <a href='/game/777'>/game/777</a></p>")
+    return HTMLResponse("<h1>Шакал-Шахматы запущены!</h1><p>Перейдите в комнату <a href='/game/777'>/game/777</a></p>")
 
 @app.get("/game/{room_id}")
 async def get_room(room_id: str):
@@ -38,6 +36,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
             "connections": [],
             "white": None,
             "black": None,
+            "turn": "white",  # Кто сейчас ходит
             "board": [
                 ["R", "N", "B", "Q", "K", "B", "N", "R"],
                 ["P", "P", "P", "P", "P", "P", "P", "P"],
@@ -53,7 +52,6 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
     room = rooms[room_id]
     room["connections"].append(websocket)
     
-    # Автоматическое распределение ролей
     if room["white"] is None:
         room["white"] = websocket
         role = "white"
@@ -63,32 +61,31 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
     else:
         role = "spectator"
         
-    # Отправляем игроку его роль и текущую доску
-    await websocket.send_json({"type": "init", "role": role, "board": room["board"]})
+    await websocket.send_json({"type": "init", "role": role, "board": room["board"], "turn": room["turn"]})
     
     try:
         while True:
             data = await websocket.receive_json()
             
-            if data["type"] == "move" and role in ["white", "black"]:
+            if data["type"] == "move" and role == room["turn"]:
                 room["board"] = data["board"]
-                # Рассылаем новый ход всем в комнате
+                # Меняем ход на противоположный после успешного движения
+                room["turn"] = "black" if room["turn"] == "white" else "white"
+                
                 for conn in room["connections"]:
-                    await conn.send_json({"type": "update", "board": room["board"]})
+                    await conn.send_json({"type": "update", "board": room["board"], "turn": room["turn"]})
+                    
             elif data["type"] == "chat":
-                # Рассылаем сообщение в чат
                 for conn in room["connections"]:
                     await conn.send_json({"type": "chat", "sender": data["sender"], "text": data["text"]})
                     
     except WebSocketDisconnect:
         room["connections"].remove(websocket)
-        # Освобождаем роль, если игрок отключился
         if room["white"] == websocket:
             room["white"] = None
         elif room["black"] == websocket:
             room["black"] = None
             
-        # Если в комнате пусто — полностью очищаем её
         if len(room["connections"]) == 0:
             del rooms[room_id]
 
@@ -96,7 +93,6 @@ if __name__ == "__main__":
     PORT = 8000
     RENDER_APP_URL = "https://shakal-chess.onrender.com/"
     
-    # Запуск фонового потока для удержания сервера в активном состоянии
     ping_thread = threading.Thread(target=keep_alive, args=(RENDER_APP_URL,), daemon=True)
     ping_thread.start()
     

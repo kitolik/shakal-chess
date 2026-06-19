@@ -1,4 +1,6 @@
 def get_game_html(room_id: str) -> str:
+    # Используем двойные фигурные скобки {{}} для CSS/JS, чтобы Python f-строка их не ломала,
+    # а для JS-переменных внутри строк используем обычные кавычки и плюсы.
     return f"""
     <!DOCTYPE html>
     <html>
@@ -122,26 +124,28 @@ def get_game_html(room_id: str) -> str:
 
         <script>
             const roomId = "{room_id}";
-            // Автоматически переключаем протокол ws:// или wss:// в зависимости от хостинга
             const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
             const ws = new WebSocket(wsProtocol + window.location.host + "/ws/" + roomId);
 
             let myRole = "spectator";
+            let currentTurn = "white";
             let boardState = [];
             let selectedSquare = null;
 
-            // Карта Юникод-фигур
             const unicodePieces = {{
                 'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚', 'P': '♟',
                 'r': '♖', 'n': '♘', 'b': '♗', 'q': '♕', 'k': '♔', 'p': '♙',
                 '.': ''
             }};
 
-            const roleNames = {{
-                'white': 'Вы: ⚪ Белые | Ход: Белых',
-                'black': 'Вы: ⚫ Чёрные | Ход: Белых',
-                'spectator': 'Вы: 👀 Зритель | Ход: Белых'
-            }};
+            function updateStatusText() {{
+                const turnText = currentTurn === "white" ? "Ход: Белых" : "Ход: Чёрных";
+                let roleText = "Зритель";
+                if (myRole === "white") roleText = "⚪ Белые";
+                if (myRole === "black") roleText = "⚫ Чёрные";
+                
+                document.getElementById("role-status").innerText = "Вы: " + roleText + " | " + turnText;
+            }}
 
             function drawBoard() {{
                 const boardDiv = document.getElementById("chessboard");
@@ -152,8 +156,6 @@ def get_game_html(room_id: str) -> str:
                         const square = document.createElement("div");
                         const isBlackType = (r + c) % 2 === 1;
                         square.className = "square " + (isBlackType ? "black-sq" : "white-sq");
-                        square.dataset.row = r;
-                        square.dataset.col = c;
                         
                         const piece = boardState[r][c];
                         square.innerText = unicodePieces[piece] || "";
@@ -168,19 +170,35 @@ def get_game_html(room_id: str) -> str:
                 }}
             }}
 
+            function isYourPiece(piece) {{
+                if (!piece || piece === '.') return false;
+                const isWhitePiece = piece === piece.toLowerCase();
+                return (myRole === "white" && isWhitePiece) || (myRole === "black" && !isWhitePiece);
+            }}
+
             function handleSquareClick(r, c) {{
-                if (myRole === "spectator") return;
+                if (myRole === "spectator" || myRole !== currentTurn) return;
+                
+                const clickedPiece = boardState[r][c];
                 
                 if (selectedSquare) {{
-                    const p = boardState[selectedSquare.row][selectedSquare.col];
-                    boardState[c][selectedSquare.col] = "."; // Простейшая логика перемещения без правил шахмат
-                    boardState[r][c] = p;
+                    // Если кликнули на другую свою фигуру — перевыбираем её
+                    if (isYourPiece(clickedPiece)) {{
+                        selectedSquare = {{ row: r, col: c }};
+                        drawBoard();
+                        return;
+                    }}
+                    
+                    // Сама логика перемещения (пока без строгих шахматных правил, но ходить можно)
+                    const movingPiece = boardState[selectedSquare.row][selectedSquare.col];
+                    boardState[r][c] = movingPiece;
                     boardState[selectedSquare.row][selectedSquare.col] = ".";
                     
                     ws.send(JSON.stringify({{ "type": "move", "board": boardState }}));
                     selectedSquare = null;
                 }} else {{
-                    if (boardState[r][c] !== ".") {{
+                    // Выбираем фигуру только если она принадлежит текущему игроку
+                    if (isYourPiece(clickedPiece)) {{
                         selectedSquare = {{ row: r, col: c }};
                     }}
                 }}
@@ -193,23 +211,31 @@ def get_game_html(room_id: str) -> str:
                 if (data.type === "init") {{
                     myRole = data.role;
                     boardState = data.board;
-                    document.getElementById("role-status").innerText = roleNames[myRole];
+                    currentTurn = data.turn;
+                    updateStatusText();
                     drawBoard();
                 }} else if (data.type === "update") {{
                     boardState = data.board;
+                    currentTurn = data.turn;
+                    updateStatusText();
                     drawBoard();
                 }} else if (data.type === "chat") {{
                     const msgDiv = document.createElement("div");
-                    msgDiv.innerHTML = `<b>$ {{data.sender}}:</b> $ {{data.text}}`;
-                    document.getElementById("chat-messages").appendChild(msgDiv);
+                    // Исправлено: чистый JS без поломки от f-строки Python
+                    msgDiv.innerHTML = "<b>" + data.sender + ":</b> " + data.text;
+                    const messagesContainer = document.getElementById("chat-messages");
+                    messagesContainer.appendChild(msgDiv);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }}
             }};
 
-            // Логика чата
             function sendChatMessage() {{
                 const input = document.getElementById("chat-input");
                 if (input.value.trim() !== "") {{
-                    let name = myRole === "white" ? "Белый" : (myRole === "black" ? "Чёрный" : "Зритель");
+                    let name = "Зритель";
+                    if (myRole === "white") name = "Белый";
+                    if (myRole === "black") name = "Чёрный";
+                    
                     ws.send(JSON.stringify({{
                         "type": "chat",
                         "sender": name,
