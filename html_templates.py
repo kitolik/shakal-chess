@@ -8,8 +8,8 @@ def get_game_html(room_id: str) -> str:
         <style>
             body {{
                 font-family: 'Segoe UI', sans-serif;
-                background: url('/bg.jpg') no-repeat center center fixed;
-                background-size: cover;
+                /* Заменяем тяжелую картинку на крутой быстрый космический градиент */
+                background: radial-gradient(circle at top right, #1e102f, #0b0813);
                 color: #fff;
                 display: flex;
                 flex-direction: column;
@@ -21,14 +21,14 @@ def get_game_html(room_id: str) -> str:
             }}
             
             .status-box {{
-                background: rgba(15, 15, 20, 0.85);
+                background: rgba(20, 16, 35, 0.85);
                 padding: 12px 25px;
                 border-radius: 12px;
                 font-size: 18px;
                 font-weight: bold;
                 margin-bottom: 20px;
-                border: 2px solid #ff4a8d;
-                box-shadow: 0 0 20px rgba(255, 74, 141, 0.5);
+                border: 2px solid #a970ff;
+                box-shadow: 0 0 20px rgba(169, 112, 255, 0.4);
                 backdrop-filter: blur(8px);
             }}
             
@@ -36,11 +36,11 @@ def get_game_html(room_id: str) -> str:
                 display: flex;
                 gap: 25px;
                 align-items: flex-start;
-                background: rgba(15, 15, 20, 0.8);
+                background: rgba(15, 12, 28, 0.85);
                 padding: 20px;
                 border-radius: 16px;
-                box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-                border: 1px solid rgba(255,255,255,0.1);
+                box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+                border: 1px solid rgba(169, 112, 255, 0.2);
                 backdrop-filter: blur(8px);
             }}
             
@@ -48,8 +48,9 @@ def get_game_html(room_id: str) -> str:
                 display: grid;
                 grid-template-columns: repeat(8, 65px);
                 grid-template-rows: repeat(8, 65px);
-                border: 5px solid #2d2d38;
-                border-radius: 6px;
+                border: 6px solid #28233b;
+                border-radius: 8px;
+                box-shadow: 0 5px 25px rgba(0,0,0,0.5);
             }}
             
             .square {{
@@ -58,18 +59,39 @@ def get_game_html(room_id: str) -> str:
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 46px;
+                font-size: 48px;
                 cursor: pointer;
                 user-select: none;
                 transition: background-color 0.1s;
             }}
             
-            .white-sq {{ background-color: #eedcbf; color: #000; }}
-            .black-sq {{ background-color: #b88b64; color: #000; }}
+            /* Цвета доски: делаем их более контрастными для глаз */
+            .white-sq {{ background-color: #f0d9b5; }}
+            .black-sq {{ background-color: #b58863; }}
+            
+            /* Стилизация фигур, чтобы они четко отличались */
+            .piece-white {{
+                color: #ffffff;
+                text-shadow: 
+                    1px 1px 2px #000, 
+                   -1px -1px 2px #000, 
+                    1px -1px 2px #000, 
+                   -1px 1px 2px #000,
+                    0px 0px 4px rgba(0,0,0,0.8);
+            }}
+            
+            .piece-black {{
+                color: #1a1a1a;
+                text-shadow: 
+                    1px 1px 1px #fff,
+                   -1px -1px 1px #fff,
+                    1px -1px 1px #fff,
+                   -1px 1px 1px #fff;
+            }}
             
             .selected {{ 
-                background-color: #7fffd4 !important;
-                box-shadow: inset 0 0 12px rgba(0,0,0,0.3);
+                background-color: #7bdcb5 !important;
+                box-shadow: inset 0 0 15px rgba(0,0,0,0.4);
             }}
             
             .side-panel {{
@@ -79,10 +101,10 @@ def get_game_html(room_id: str) -> str:
             }}
             
             .chat-container {{
-                width: 280px;
+                width: 300px;
                 height: 380px;
-                background-color: rgba(5, 5, 8, 0.95);
-                border: 2px solid #2d2d38;
+                background-color: #0e0c15;
+                border: 2px solid #231f38;
                 border-radius: 12px;
                 display: flex;
                 flex-direction: column;
@@ -90,12 +112,13 @@ def get_game_html(room_id: str) -> str:
             }}
             
             .chat-title {{
-                background: linear-gradient(90deg, #ff4a8d, #8a2be2);
+                background: linear-gradient(90deg, #9146ff, #6441a5);
                 padding: 12px;
                 text-align: center;
                 font-size: 13px;
                 font-weight: bold;
                 letter-spacing: 1px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             }}
             
             .messages {{
@@ -109,37 +132,41 @@ def get_game_html(room_id: str) -> str:
             }}
             
             .messages div {{
-                background: rgba(255,255,255,0.05);
-                padding: 6px 10px;
-                border-radius: 6px;
+                background: rgba(255,255,255,0.03);
+                padding: 8px 12px;
+                border-radius: 8px;
+                border-left: 3px solid #9146ff;
             }}
             
             .input-area {{
                 display: flex;
                 padding: 12px;
                 gap: 8px;
-                border-top: 1px solid #2d2d38;
+                border-top: 1px solid #231f38;
+                background: #13111c;
             }}
             
             .input-area input {{
                 flex: 1;
-                background: #111115;
-                border: 1px solid #3d3d4e;
+                background: #09080e;
+                border: 1px solid #383254;
                 color: #fff;
-                padding: 8px;
+                padding: 10px;
                 border-radius: 6px;
                 outline: none;
             }}
             
             .input-area button {{
-                background: #ff4a8d;
+                background: #9146ff;
                 border: none;
                 color: white;
-                padding: 8px 15px;
+                padding: 8px 18px;
                 border-radius: 6px;
                 cursor: pointer;
                 font-weight: bold;
+                transition: background 0.2s;
             }}
+            .input-area button:hover {{ background: #772ce8; }}
             
             .controls-panel {{
                 display: flex;
@@ -155,17 +182,18 @@ def get_game_html(room_id: str) -> str:
                 font-weight: bold;
                 cursor: pointer;
                 font-size: 14px;
-                transition: transform 0.1s;
+                transition: transform 0.1s, opacity 0.2s;
             }}
             .btn:active {{ transform: scale(0.96); }}
-            .btn-resign {{ background: #e63946; }}
-            .btn-draw {{ background: #457b9d; }}
+            .btn:hover {{ opacity: 0.9; }}
+            .btn-resign {{ background: #eb0400; }}
+            .btn-draw {{ background: #3a3b45; }}
             
             .modal {{
                 display: none;
                 position: fixed;
                 top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0,0,0,0.85);
+                background: rgba(0,0,0,0.8);
                 z-index: 100;
                 align-items: center;
                 justify-content: center;
@@ -173,8 +201,8 @@ def get_game_html(room_id: str) -> str:
             }}
             
             .modal-content {{
-                background: #1e1e24;
-                border: 2px solid #ff4a8d;
+                background: #181623;
+                border: 2px solid #9146ff;
                 padding: 30px;
                 border-radius: 16px;
                 text-align: center;
@@ -194,13 +222,13 @@ def get_game_html(room_id: str) -> str:
                 font-weight: bold;
                 cursor: pointer;
             }}
-            .btn-accept {{ background: #2a9d8f; color: white; }}
-            .btn-decline {{ background: #e63946; color: white; }}
+            .btn-accept {{ background: #00b589; color: white; }}
+            .btn-decline {{ background: #eb0400; color: white; }}
         </style>
     </head>
     <body>
 
-        <div class="status-box" id="role-status">Инициализация игрового поля...</div>
+        <div class="status-box" id="role-status">Загрузка комнаты...</div>
 
         <div class="game-container">
             <div class="board" id="chessboard"></div>
@@ -242,9 +270,10 @@ def get_game_html(room_id: str) -> str:
             let boardState = [];
             let selectedSquare = null;
 
+            // Используем заполненные юникод-фигуры для лучшего рендеринга стилей
             const unicodePieces = {{
-                'r': '♖', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
-                'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙',
+                'P': '♟', 'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚',
+                'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
                 '.': ''
             }};
 
@@ -267,7 +296,15 @@ def get_game_html(room_id: str) -> str:
                         square.className = "square " + (isBlackType ? "black-sq" : "white-sq");
                         
                         const piece = boardState[r][c];
-                        square.innerText = unicodePieces[piece] || "";
+                        if (piece && piece !== '.') {{
+                            square.innerText = unicodePieces[piece];
+                            // Добавляем класс цвета в зависимости от регистра (ЗАГЛАВНЫЕ = белые)
+                            if (piece === piece.toUpperCase()) {{
+                                square.classList.add("piece-white");
+                            }} else {{
+                                square.classList.add("piece-black");
+                            }}
+                        }}
                         
                         if (selectedSquare && selectedSquare.row === r && selectedSquare.col === c) {{
                             square.classList.add("selected");
@@ -281,7 +318,7 @@ def get_game_html(room_id: str) -> str:
 
             function isYourPiece(piece) {{
                 if (!piece || piece === '.') return false;
-                const isWhitePiece = piece === piece.toLowerCase();
+                const isWhitePiece = (piece === piece.toUpperCase());
                 return (myRole === "white" && isWhitePiece) || (myRole === "black" && !isWhitePiece);
             }}
 
